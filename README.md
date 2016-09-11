@@ -17,7 +17,7 @@ In your component,
 ```
 <template>
   <div>
-    vue-dfp(adunit="my_dfp_ad", dimensions="728x90")
+    <vue-dfp adunit="my_dfp_ad" dimensions="728x90"></vue-dfp>
   </div>
 </template>
 ```
