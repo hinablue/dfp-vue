@@ -1,6 +1,6 @@
 # dfp-vue - A Vue implementation for Google DFP
 
-The idea from (jQuery-dfp)[https://github.com/coop182/jquery.dfp.js]
+The idea from [jQuery-dfp](https://github.com/coop182/jquery.dfp.js)
 
 # Simple Usage
 
