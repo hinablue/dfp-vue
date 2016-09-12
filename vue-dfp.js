@@ -169,21 +169,33 @@
       ready () {
         this.getDimensions()
 
+        let dfpOptions = Vue.config.dfpOptions
         let googletag = window.googletag
+        let rerenderAdUnit = false
+        let googleAdUnit
+        let slotName
+
+        if (dfpOptions.adUnits.length > 0) {
+          if (dfpOptions.adUnits.filter((adunit) => {
+            return typeof Array.prototype.find.call(
+              document.querySelectorAll('.vue-dfp-adunit'),
+              (slot) => {
+                return slot.firstElementChild.id === Object.keys(adunit)[0]
+              }
+            ) !== 'undefined'
+          }).length === 0) {
+            rerenderAdUnit = true
+            dfpOptions.adUnits = []
+            dfpOptions.onloaded = []
+            dfpOptions.rendered = 0
+          }
+        }
 
         googletag.cmd.push(() => {
-          const dfpOptions = Vue.config.dfpOptions
-          let googleAdUnit
-          let slotName
-
-          if (typeof this.sotreAs !== 'undefined') {
-            googleAdUnit = this.sotreAs
+          if (dfpOptions.dfpID === '') {
+            slotName = this.adunit
           } else {
-            if (dfpOptions.dfpID === '') {
-              slotName = this.adunit
-            } else {
-              slotName = '/' + dfpOptions.dfpID + '/' + this.adunit
-            }
+            slotName = '/' + dfpOptions.dfpID + '/' + this.adunit
           }
 
           if (this.outofpage) {
@@ -225,6 +237,10 @@
           if (typeof dfpOptions.beforeEachAdLoaded === 'function') {
             dfpOptions.beforeEachAdLoaded.call(this, document.getElementById(this.adUnitID));
           }
+
+          googletag.cmd.push(() => {
+            googletag.display(this.adUnitID)
+          })
         })
       },
       methods: {
@@ -248,6 +264,11 @@
         return {
           adUnitID: this.adunit.replace(/[^A-z0-9]/g, '_') + '-auto-gen-id-' + this.generateId() + this.generateId()
         }
+      },
+      beforeDestroy () {
+        googletag.cmd.push(() => {
+          googletag.destroySlots()
+        })
       }
     }))
 
@@ -297,6 +318,8 @@
 
       googletag.cmd.push(() => {
         let pubadsService = googletag.pubads()
+
+        pubadsService.setForceSafeFrame(true)
 
         if (dfpOptions.enableSingleRequest) {
             pubadsService.enableSingleRequest()
@@ -365,7 +388,7 @@
 
           if (typeof dfpOptions.afterEachAdLoaded === 'function') {
             const adunit = Array.prototype.find.call(slots, function (slot) {
-              return event.slot.getSlotId().getDomId() === slot.firstElementChild.id
+              return event.slot.getSlotElementId() === slot.firstElementChild.id
             })
             if (typeof adunit !== 'undefined') {
               dfpOptions.afterEachAdLoaded.call(
@@ -376,21 +399,45 @@
             }
           }
 
-          setTimeout(() => {
-            if (dfpOptions.rendered === dfpOptions.onloaded.length &&
-              dfpOptions.onloaded.length !== dfpOptions.adUnits.length
+          setTimeout(function () {
+            const checkDisplayNoneSlot = dfpOptions.adUnits.filter((adunit) => {
+              return document.getElementById(Object.keys(adunit)[0]).style.display === 'none'
+            })
+            if ((dfpOptions.rendered === dfpOptions.onloaded.length &&
+              dfpOptions.onloaded.length !== dfpOptions.adUnits.length) ||
+              checkDisplayNoneSlot.length > 0
             ) {
               const noShowDfp = dfpOptions.adUnits.filter((adunit) => {
                 return !(dfpOptions.onloaded.find((slot) => {
-                  return slot.getSlotId().getDomId() === Object.keys(adunit)[0]
+                  return slot.getSlotElementId() === Object.keys(adunit)[0]
                 }))
               })
 
-              if (noShowDfp.length > 0) {
-                noShowDfp.forEach((adunit) => {
+              if (checkDisplayNoneSlot.length > 0) {
+                checkDisplayNoneSlot.forEach((adunit) => {
                   googletag.cmd.push(function () {
                     googletag.pubads().refresh([adunit[Object.keys(adunit)[0]]])
                   })
+                })
+              }
+
+              if (noShowDfp.length > 0) {
+                noShowDfp.forEach((adunit) => {
+                  try {
+                    if (typeof adunit[Object.keys(adunit)[0]] !== 'undefined') {
+                      googletag.cmd.push(function () {
+                        googletag.pubads().refresh([adunit[Object.keys(adunit)[0]]])
+                      })
+                    } else {
+                      googletag.cmd.push(function () {
+                        googletag.display(Object.keys(adunit)[0])
+                      })
+                    }
+                  } catch(e) {
+                    googletag.cmd.push(function () {
+                      googletag.display(Object.keys(adunit)[0])
+                    })
+                  }
                 })
               }
             }
@@ -416,7 +463,7 @@
                   Array.prototype.forEach.call(getSlots, function (slot) {
                     dfpOptions.afterAdBlocked.call(
                       dfpScript,
-                      document.getElementById(slot.getSlotId().getDomId()),
+                      document.getElementById(slot.getSlotElementId()),
                       this
                     )
                   })
@@ -489,7 +536,8 @@
           clearInterval(checkInitializeNoShowTimer)
         }
 
-        checkInitializeNoShowTimer = setInterval(() => {
+        checkInitializeNoShowTimer = setInterval(function () {
+          let slots = document.querySelectorAll('.vue-dfp-adunit')
           if (noShowTimer > 0) {
             Array.prototype.forEach.call(slots, (adunit) => {
               if (adunit.firstElementChild.hasAttribute('data-google-query-id') === false) {
@@ -500,10 +548,16 @@
                   googletag.cmd.push(function () {
                     googletag.pubads().refresh([adUnit[adunit.firstElementChild.id]])
                   })
+                } else {
+                  googletag.cmd.push(function () {
+                    googletag.display(adunit.firstElementChild.id)
+                  })
                 }
               }
             })
             noShowTimer--
+          } else {
+            clearInterval(checkInitializeNoShowTimer)
           }
         }, 1000)
       }
