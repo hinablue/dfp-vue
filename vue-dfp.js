@@ -314,7 +314,12 @@
     const loadGoogleTag = () => {
       document.removeEventListener('DOMContentLoaded', loadGoogleTag, false)
 
-      const slots = document.querySelectorAll('.vue-dfp-adunit')
+      let slots = []
+      document.querySelectorAll('.vue-dfp-adunit').forEach((slot) => {
+        if (slot.style.display === 'block') {
+          slots.push(slot)
+        }
+      })
 
       googletag.cmd.push(() => {
         let pubadsService = googletag.pubads()
