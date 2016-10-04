@@ -383,6 +383,7 @@
           dfpOptions.onloaded.push(event.slot)
         })
 
+        let slotRenderEndedCheckNoShowTimeout
         pubadsService.addEventListener('slotRenderEnded', function (event) {
           dfpOptions.rendered++
 
@@ -399,7 +400,11 @@
             }
           }
 
-          setTimeout(function () {
+          if (typeof slotRenderEndedCheckNoShowTimeout !== 'undefined') {
+            clearTimeout(slotRenderEndedCheckNoShowTimeout)
+          }
+
+          slotRenderEndedCheckNoShowTimeout = setTimeout(function () {
             const checkDisplayNoneSlot = dfpOptions.adUnits.filter((adunit) => {
               return document.getElementById(Object.keys(adunit)[0]).style.display === 'none'
             })
@@ -530,39 +535,42 @@
         }
       })
 
-      let noShowTimer = 3
-      const checkInitializeNoShow = () => {
-        if (typeof checkInitializeNoShowTimer !== 'undefined') {
-          clearInterval(checkInitializeNoShowTimer)
-        }
+      // Maybe no need to force check.
+      //
+      // let noShowTimer = 3
+      // let checkInitializeNoShowTimer
+      // const checkInitializeNoShow = () => {
+      //   if (typeof checkInitializeNoShowTimer !== 'undefined') {
+      //     clearInterval(checkInitializeNoShowTimer)
+      //   }
 
-        checkInitializeNoShowTimer = setInterval(function () {
-          let slots = document.querySelectorAll('.vue-dfp-adunit')
-          if (noShowTimer > 0) {
-            Array.prototype.forEach.call(slots, (adunit) => {
-              if (adunit.firstElementChild.hasAttribute('data-google-query-id') === false) {
-                let adUnit = dfpOptions.adUnits.find((unit) => {
-                  return adunit.firstElementChild.id === Object.keys(unit)[0]
-                })
-                if (typeof adUnit !== 'undefined') {
-                  googletag.cmd.push(function () {
-                    googletag.pubads().refresh([adUnit[adunit.firstElementChild.id]])
-                  })
-                } else {
-                  googletag.cmd.push(function () {
-                    googletag.display(adunit.firstElementChild.id)
-                  })
-                }
-              }
-            })
-            noShowTimer--
-          } else {
-            clearInterval(checkInitializeNoShowTimer)
-          }
-        }, 1000)
-      }
+      //   checkInitializeNoShowTimer = setInterval(function () {
+      //     let slots = document.querySelectorAll('.vue-dfp-adunit')
+      //     if (noShowTimer > 0) {
+      //       Array.prototype.forEach.call(slots, (adunit) => {
+      //         if (adunit.firstElementChild.hasAttribute('data-google-query-id') === false) {
+      //           let adUnit = dfpOptions.adUnits.find((unit) => {
+      //             return adunit.firstElementChild.id === Object.keys(unit)[0]
+      //           })
+      //           if (typeof adUnit !== 'undefined') {
+      //             googletag.cmd.push(function () {
+      //               googletag.pubads().refresh([adUnit[adunit.firstElementChild.id]])
+      //             })
+      //           } else {
+      //             googletag.cmd.push(function () {
+      //               googletag.display(adunit.firstElementChild.id)
+      //             })
+      //           }
+      //         }
+      //       })
+      //       noShowTimer--
+      //     } else {
+      //       clearInterval(checkInitializeNoShowTimer)
+      //     }
+      //   }, 1000)
+      // }
 
-      checkInitializeNoShow()
+      // checkInitializeNoShow()
     }
 
     document.addEventListener('DOMContentLoaded', loadGoogleTag, false)
