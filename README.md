@@ -2,6 +2,10 @@
 
 The idea from [jQuery-dfp](https://github.com/coop182/jquery.dfp.js)
 
+# Vue2
+
+Please use `next` branch for Vue2.
+
 # Simple Usage
 
 In your `app.js`,
